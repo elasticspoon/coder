@@ -96,9 +96,7 @@ func TestTemplateList(t *testing.T) {
 		inv, root := clitest.New(t, "templates", "list")
 		clitest.SetupConfig(t, templateAdmin, root)
 
-		pty := ptytest.New(t)
-		inv.Stdin = pty.Input()
-		inv.Stderr = pty.Output()
+		pty := ptytest.New(t).Attach(inv)
 
 		ctx, cancelFunc := context.WithTimeout(context.Background(), testutil.WaitLong)
 		defer cancelFunc()

@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -19,6 +21,7 @@ import (
 	"golang.org/x/xerrors"
 
 	"github.com/coder/coder/v2/cli/clibase"
+	"github.com/coder/coder/v2/cli/clitest"
 	"github.com/coder/coder/v2/pty"
 	"github.com/coder/coder/v2/testutil"
 )
@@ -350,8 +353,10 @@ func (e *outExpecter) fatalf(reason string, format string, args ...interface{}) 
 type PTY struct {
 	outExpecter
 	pty.PTY
-	closeOnce sync.Once
-	closeErr  error
+	closeOnce    sync.Once
+	closeErr     error
+	mirrorBuf    *bytes.Buffer
+	replacements map[string]string
 }
 
 func (p *PTY) Close() error {
@@ -374,13 +379,67 @@ func (p *PTY) Close() error {
 	return p.closeErr
 }
 
-func (p *PTY) Attach(inv *clibase.Invocation) *PTY {
+func (p *PTY) MirrorOut(inv *clibase.Invocation, w io.Writer) *PTY {
 	p.t.Helper()
 
 	inv.Stdout = p.Output()
 	inv.Stderr = p.Output()
 	inv.Stdin = p.Input()
+
 	return p
+}
+
+func (p *PTY) Attach(inv *clibase.Invocation) *PTY {
+	p.t.Helper()
+
+	var w bytes.Buffer
+
+	inv.Stdout = io.MultiWriter(p.Output(), &w)
+	inv.Stderr = io.MultiWriter(p.Output(), &w)
+	inv.Stdin = io.TeeReader(p.Input(), &w)
+	p.mirrorBuf = &w
+
+	p.t.Cleanup(func() {
+		p.Flush()
+	})
+	return p
+}
+
+func (p *PTY) Flush() error {
+	p.t.Helper()
+
+	if p.mirrorBuf == nil {
+		return nil
+	}
+
+	actual := p.mirrorBuf.Bytes()
+	if len(actual) == 0 {
+		p.t.Fatal("no output")
+	}
+
+	actual = clitest.NormalizeGoldenFile(p.t, actual)
+	goldenPath := filepath.Join("testdata", strings.ReplaceAll(p.t.Name(), "/", "_")+".golden")
+
+	if *clitest.UpdateGoldenFiles {
+		p.t.Logf("update golden file for: %q: %s", p.t.Name(), goldenPath)
+		err := os.WriteFile(goldenPath, actual, 0o600)
+		require.NoError(p.t, err, "update golden file")
+	}
+
+	expected, err := os.ReadFile(goldenPath)
+	require.NoError(p.t, err, "read golden file, run \"make update-golden-files\" and commit the changes")
+
+	for k, v := range p.replacements {
+		actual = bytes.ReplaceAll(actual, []byte(k), []byte(v))
+	}
+
+	expected = clitest.NormalizeGoldenFile(p.t, expected)
+	require.Equal(
+		p.t, string(expected), string(actual),
+		"golden file mismatch: %s, run \"make update-golden-files\", verify and commit the changes",
+		goldenPath,
+	)
+	return nil
 }
 
 func (p *PTY) Write(r rune) {
