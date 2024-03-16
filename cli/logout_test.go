@@ -28,8 +28,8 @@ func TestLogout(t *testing.T) {
 
 		logoutChan := make(chan struct{})
 		logout, _ := clitest.New(t, "logout", "--global-config", string(config))
-		logout.Stdin = pty.Input()
-		logout.Stdout = pty.Output()
+
+		pty.Attach(logout)
 
 		go func() {
 			defer close(logoutChan)
@@ -56,8 +56,7 @@ func TestLogout(t *testing.T) {
 
 		logoutChan := make(chan struct{})
 		logout, _ := clitest.New(t, "logout", "--global-config", string(config), "-y")
-		logout.Stdin = pty.Input()
-		logout.Stdout = pty.Output()
+		pty.Attach(logout)
 
 		go func() {
 			defer close(logoutChan)
@@ -86,8 +85,7 @@ func TestLogout(t *testing.T) {
 		logoutChan := make(chan struct{})
 		logout, _ := clitest.New(t, "logout", "--global-config", string(config))
 
-		logout.Stdin = pty.Input()
-		logout.Stdout = pty.Output()
+		pty.Attach(logout)
 
 		go func() {
 			defer close(logoutChan)

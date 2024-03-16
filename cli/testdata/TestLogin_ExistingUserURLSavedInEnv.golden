@@ -1,0 +1,7 @@
+Attempting to authenticate with environment URL: '[CODER_URL]'
+Open the following in your browser:
+
+	[CODER_URL]/cli-auth
+
+> Paste your token here: [CODER_SESSION_TOKEN]
+> Welcome to Coder, testuser! You're authenticated.

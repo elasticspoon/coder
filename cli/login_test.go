@@ -244,13 +244,16 @@ func TestLogin(t *testing.T) {
 		t.Parallel()
 		client := coderdtest.New(t, nil)
 		url := client.URL.String()
-		coderdtest.CreateFirstUser(t, client)
+		res := coderdtest.CreateFirstUser(t, client)
 
 		inv, _ := clitest.New(t, "login", "--no-open")
 		inv.Environ.Set("CODER_URL", url)
 
 		doneChan := make(chan struct{})
 		pty := ptytest.New(t).Attach(inv)
+
+		pty.PrepareTestData(res, client)
+
 		go func() {
 			defer close(doneChan)
 			err := inv.Run()
@@ -270,9 +273,11 @@ func TestLogin(t *testing.T) {
 
 		ctx, cancelFunc := context.WithCancel(context.Background())
 		defer cancelFunc()
+
 		doneChan := make(chan struct{})
 		root, _ := clitest.New(t, "login", client.URL.String(), "--no-open")
 		pty := ptytest.New(t).Attach(root)
+
 		go func() {
 			defer close(doneChan)
 			err := root.WithContext(ctx).Run()

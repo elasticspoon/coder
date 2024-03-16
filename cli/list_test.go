@@ -34,6 +34,7 @@ func TestList(t *testing.T) {
 		inv, root := clitest.New(t, "ls")
 		clitest.SetupConfig(t, member, root)
 		pty := ptytest.New(t).Attach(inv)
+		pty.PrepareTestData(client, root, r, owner, member, memberUser)
 
 		ctx, cancelFunc := context.WithTimeout(context.Background(), testutil.WaitLong)
 		defer cancelFunc()

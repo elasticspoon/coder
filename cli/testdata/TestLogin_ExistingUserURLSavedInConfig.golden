@@ -1,0 +1,7 @@
+Attempting to authenticate with config URL: 'http://localhost:34561'
+Open the following in your browser:
+
+	http://localhost:34561/cli-auth
+
+> Paste your token here: KF6vmd4Ryv-nb030dsbaaxXNOrIMp2uaG
+> Welcome to Coder, testuser! You're authenticated.
